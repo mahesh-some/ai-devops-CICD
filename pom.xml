@@ -10,7 +10,6 @@
     <artifactId>naruto</artifactId>
     <version>1.0</version>
 
-</project>
 
 <packaging>war</packaging>
 
@@ -26,3 +25,6 @@
 <build>
     <finalName>naruto</finalName>
 </build>
+
+</project>
+
