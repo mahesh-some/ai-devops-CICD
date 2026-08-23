@@ -1,6 +1,8 @@
 pipeline {
 
-    agent any
+    agent {
+    label 'jenkins-agent'
+}
 
     environment {
         TOMCAT_HOST = '13.233.145.247'
