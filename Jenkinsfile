@@ -3,6 +3,10 @@ pipeline {
         label 'zomato-jenkins-agent'
     }
 
+    environment {
+        DOCKER_IMAGE = 'somemahesh/zomato-app:1.0'
+    }
+
     stages {
 
         stage('Verify Agent') {
@@ -35,6 +39,24 @@ pipeline {
             }
         }
 
+        stage('Build & Push Docker Image') {
+            steps {
+                container('kaniko') {
+                    sh '''
+                        echo "Building Docker image with Kaniko..."
+                        echo "Image: ${DOCKER_IMAGE}"
+
+                        /kaniko/executor \
+                          --context "${WORKSPACE}" \
+                          --dockerfile "${WORKSPACE}/Dockerfile" \
+                          --destination "${DOCKER_IMAGE}" \
+                          --cache=false
+
+                        echo "Docker image built and pushed successfully."
+                    '''
+                }
+            }
+        }
     }
 
     post {
