@@ -57,15 +57,58 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                container('jnlp') {
+                    sh '''
+                        echo "Deploying Zomato application to Kubernetes..."
+
+                        kubectl apply -f k8s/zomato-deployment.yaml
+                        kubectl apply -f k8s/zomato-service.yaml
+
+                        echo "Waiting for deployment rollout..."
+                        kubectl rollout status deployment/zomato --timeout=180s
+
+                        echo "Kubernetes deployment completed successfully."
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Kubernetes Deployment') {
+            steps {
+                container('jnlp') {
+                    sh '''
+                        echo "=== Kubernetes Nodes ==="
+                        kubectl get nodes -o wide
+
+                        echo "=== Zomato Deployment ==="
+                        kubectl get deployment zomato
+
+                        echo "=== Zomato Pods ==="
+                        kubectl get pods -l app=zomato -o wide
+
+                        echo "=== Zomato Service ==="
+                        kubectl get service zomato
+
+                        echo "=== Zomato Image ==="
+                        kubectl get deployment zomato \
+                          -o jsonpath='{.spec.template.spec.containers[0].image}'
+                        echo
+                    '''
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo 'Zomato Kubernetes CI Pipeline completed successfully.'
+            echo 'Zomato Kubernetes CI/CD Pipeline completed successfully.'
         }
 
         failure {
-            echo 'Zomato Kubernetes CI Pipeline failed.'
+            echo 'Zomato Kubernetes CI/CD Pipeline failed.'
         }
     }
 }
