@@ -1,7 +1,7 @@
 pipeline {
 
     agent {
-        label 'jenkins-agent'
+        label 'zomato-k8s-agent'
     }
 
     environment {
