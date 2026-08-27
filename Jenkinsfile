@@ -1,18 +1,20 @@
 pipeline {
-
     agent {
-        label 'zomato-k8s-agent'
-    }
-
-    environment {
-        TOMCAT_HOST = '13.233.145.247'
-        TOMCAT_USER = 'deployer'
-        TOMCAT_WEBAPPS = '/var/lib/tomcat10/webapps'
-        SSH_KEY = '/home/jenkins/.ssh/id_ed25519'
-        APP_NAME = 'devops-webapp'
+        label 'zomato-jenkins-agent'
     }
 
     stages {
+
+        stage('Verify Agent') {
+            steps {
+                sh 'echo Running on Kubernetes Jenkins Agent'
+                sh 'hostname'
+                sh 'java -version'
+                sh 'mvn -version'
+                sh 'ssh -V'
+                sh 'scp -V || true'
+            }
+        }
 
         stage('Checkout') {
             steps {
@@ -20,7 +22,7 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build Maven Application') {
             steps {
                 sh 'mvn clean package'
             }
@@ -28,63 +30,20 @@ pipeline {
 
         stage('Verify WAR') {
             steps {
-                sh 'ls -lh target/${APP_NAME}.war'
+                sh 'ls -lh target/'
+                sh 'test -f target/devops-webapp.war'
             }
         }
 
-        stage('Test SSH Connection') {
-            steps {
-                sh '''
-                    ssh -o BatchMode=yes \
-                    -o StrictHostKeyChecking=no \
-                    -i ${SSH_KEY} \
-                    ${TOMCAT_USER}@${TOMCAT_HOST} \
-                    "whoami && hostname"
-                '''
-            }
-        }
-
-        stage('Deploy to Tomcat') {
-            steps {
-                sh '''
-                    scp -o BatchMode=yes \
-                    -o StrictHostKeyChecking=no \
-                    -i ${SSH_KEY} \
-                    target/${APP_NAME}.war \
-                    ${TOMCAT_USER}@${TOMCAT_HOST}:${TOMCAT_WEBAPPS}/
-                '''
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                sh '''
-                    ssh -o BatchMode=yes \
-                    -o StrictHostKeyChecking=no \
-                    -i ${SSH_KEY} \
-                    ${TOMCAT_USER}@${TOMCAT_HOST} \
-                    "sleep 5 && \
-                    test -f ${TOMCAT_WEBAPPS}/${APP_NAME}.war && \
-                    curl -f http://localhost:8080/${APP_NAME}/"
-                '''
-            }
-        }
     }
 
     post {
-
         success {
-            echo '========================================='
-            echo 'CI/CD deployment successful!'
-            echo 'Application deployed to Tomcat.'
-            echo '========================================='
+            echo 'Zomato Kubernetes CI Pipeline completed successfully.'
         }
 
         failure {
-            echo '========================================='
-            echo 'CI/CD pipeline failed!'
-            echo 'Check the Jenkins console output.'
-            echo '========================================='
+            echo 'Zomato Kubernetes CI Pipeline failed.'
         }
     }
 }
