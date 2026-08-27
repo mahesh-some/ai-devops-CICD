@@ -5,7 +5,7 @@ metadata:
   labels:
     app: zomato
 spec:
-  replicas: 4
+  replicas: 6
   selector:
     matchLabels:
       app: zomato
@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: zomato
-          image: somemahesh/zomato-app:1.0
+          image: somemahesh/zomato-app:1.1
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 80
               protocol: TCP

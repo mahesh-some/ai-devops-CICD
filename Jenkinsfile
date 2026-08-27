@@ -4,7 +4,9 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE = 'somemahesh/zomato-app:1.0'
+        DOCKER_REPO = 'somemahesh/zomato-app'
+        DOCKER_TAG = "${BUILD_NUMBER}"
+        DOCKER_IMAGE = "${DOCKER_REPO}:${DOCKER_TAG}"
     }
 
     stages {
@@ -43,8 +45,10 @@ pipeline {
             steps {
                 container('kaniko') {
                     sh '''
-                        echo "Building Docker image with Kaniko..."
+                        echo "=========================================="
+                        echo "Building Docker image with Kaniko"
                         echo "Image: ${DOCKER_IMAGE}"
+                        echo "=========================================="
 
                         /kaniko/executor \
                           --context "${WORKSPACE}" \
@@ -53,6 +57,7 @@ pipeline {
                           --cache=false
 
                         echo "Docker image built and pushed successfully."
+                        echo "Published image: ${DOCKER_IMAGE}"
                     '''
                 }
             }
@@ -62,10 +67,20 @@ pipeline {
             steps {
                 container('jnlp') {
                     sh '''
-                        echo "Deploying Zomato application to Kubernetes..."
+                        echo "=========================================="
+                        echo "Deploying Zomato application to Kubernetes"
+                        echo "Image: ${DOCKER_IMAGE}"
+                        echo "=========================================="
 
-                        kubectl apply -f k8s/zomato-deployment.yaml
+                        echo "Applying Kubernetes Service..."
                         kubectl apply -f k8s/zomato-service.yaml
+
+                        echo "Applying Kubernetes Deployment..."
+                        kubectl apply -f k8s/zomato-deployment.yaml
+
+                        echo "Updating Deployment image..."
+                        kubectl set image deployment/zomato \
+                          zomato=${DOCKER_IMAGE}
 
                         echo "Waiting for deployment rollout..."
                         kubectl rollout status deployment/zomato --timeout=180s
@@ -80,22 +95,41 @@ pipeline {
             steps {
                 container('jnlp') {
                     sh '''
-                        echo "=== Kubernetes Nodes ==="
+                        echo "=========================================="
+                        echo "KUBERNETES NODES"
+                        echo "=========================================="
                         kubectl get nodes -o wide
 
-                        echo "=== Zomato Deployment ==="
-                        kubectl get deployment zomato
+                        echo "=========================================="
+                        echo "ZOMATO DEPLOYMENT"
+                        echo "=========================================="
+                        kubectl get deployment zomato -o wide
 
-                        echo "=== Zomato Pods ==="
+                        echo "=========================================="
+                        echo "ZOMATO PODS"
+                        echo "=========================================="
                         kubectl get pods -l app=zomato -o wide
 
-                        echo "=== Zomato Service ==="
-                        kubectl get service zomato
+                        echo "=========================================="
+                        echo "ZOMATO SERVICE"
+                        echo "=========================================="
+                        kubectl get service zomato -o wide
 
-                        echo "=== Zomato Image ==="
+                        echo "=========================================="
+                        echo "DEPLOYED IMAGE"
+                        echo "=========================================="
                         kubectl get deployment zomato \
                           -o jsonpath='{.spec.template.spec.containers[0].image}'
                         echo
+
+                        echo "=========================================="
+                        echo "ROLLOUT STATUS"
+                        echo "=========================================="
+                        kubectl rollout status deployment/zomato --timeout=180s
+
+                        echo "=========================================="
+                        echo "ZOMATO KUBERNETES DEPLOYMENT VERIFIED"
+                        echo "=========================================="
                     '''
                 }
             }
@@ -105,6 +139,7 @@ pipeline {
     post {
         success {
             echo 'Zomato Kubernetes CI/CD Pipeline completed successfully.'
+            echo "Docker image deployed: ${DOCKER_IMAGE}"
         }
 
         failure {
@@ -112,3 +147,5 @@ pipeline {
         }
     }
 }
+
+
